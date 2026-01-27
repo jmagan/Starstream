@@ -1,6 +1,8 @@
 use anyhow::{Context, anyhow};
 use std::collections::HashMap;
+use std::fmt::Debug;
 use std::sync::Arc;
+use wasmtime::component::types::ComponentItem;
 
 use p3_field::PrimeField64;
 use wasmtime::component::{Component, Linker};
@@ -41,6 +43,31 @@ impl Chain {
                     digest[1].as_canonical_u64(),
                     digest[2].as_canonical_u64(),
                     digest[3].as_canonical_u64()
+                );
+
+                let exports = component
+                    .component_type()
+                    .exports(&engine)
+                    .filter_map(|e| {
+                        if let ComponentItem::ComponentFunc(f) = e.1 {
+                            let params = f
+                                .params()
+                                .map(|(n, t)| format!("{}: {:?}", n, t))
+                                .collect::<Vec<_>>()
+                                .join(", ");
+
+                            Some(format!("{}({})", e.0, params))
+                        } else {
+                            None
+                        }
+                    })
+                    .collect::<Vec<_>>()
+                    .join("\n");
+
+                tracing::debug!(
+                    "Loaded genesis UTXO contract hash: {}, exports: {}",
+                    contract_hash,
+                    exports
                 );
 
                 // Register the utxo
