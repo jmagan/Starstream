@@ -1,13 +1,13 @@
-use std::sync::Arc;
 use bytes::BytesMut;
+use std::sync::Arc;
 
 use anyhow::Context;
-use tracing::debug;
 use tokio_util::codec::Encoder;
+use tracing::debug;
 
 use starstream_ledger::{Chain, encode::ChainContext};
-use wrpc_runtime_wasmtime::{ValEncoder, collect_component_resource_exports};
 use wasmtime::{AsContextMut, Engine};
+use wrpc_runtime_wasmtime::{ValEncoder, collect_component_resource_exports};
 
 #[derive(Clone)]
 pub struct Handler {
@@ -42,8 +42,7 @@ impl Handler {
             .wasm_instance
             .lock()
             .map_err(|e| anyhow::anyhow!("failed to lock instance: {e}"))?;
-        let component_guard = utxo
-            .wasm_component;
+        let component_guard = utxo.wasm_component;
         let mut store_guard = utxo
             .wasm_store
             .lock()
@@ -64,10 +63,9 @@ impl Handler {
 
         // Allocate results array dynamically based on the function's return type
         // let mut results = vec![wasmtime::component::Val::Bool(false); return_count];
-        
+
         // Call the function with empty params and dynamic results
-        
-        
+
         // debug!("Component function returned {} value(s)", results.len());
 
         // Encode the results using Component Model value encoding
@@ -75,7 +73,7 @@ impl Handler {
         //     .context("failed to encode component function results")?;
 
         // debug!("Component function returned: {}", result_value);
-        
+
         // Now call the function (exports is dropped, so we can use store_guard again)
         let mut results = [wasmtime::component::Val::S64(0)];
         func.call(&mut *store_guard, &[], &mut results)
@@ -99,7 +97,11 @@ impl Handler {
             let context = (&mut *store_guard).as_context_mut();
             // TODO: get "resources" from the store_guard in a way that makes sense
             let mut guest_resources_vec = Vec::new();
-            collect_component_resource_exports(&engine, &(*component_guard).component_type(), &mut guest_resources_vec);
+            collect_component_resource_exports(
+                &engine,
+                &(*component_guard).component_type(),
+                &mut guest_resources_vec,
+            );
             let mut enc = ValEncoder::new(context, ty, guest_resources_vec.as_slice());
             enc.encode(&results[i], &mut buf)
                 .with_context(|| format!("failed to encode result value {i}"))?;
